@@ -29,7 +29,8 @@ import (
 )
 
 const (
-	temporalCLIVersion = "v1.1.3"
+	temporalCLIVersion = "1.6.1" // Version without 'v' prefix for filename
+	temporalCLITag     = "v1.6.1" // Git tag with 'v' prefix
 	testTimeout        = 60 * time.Second
 )
 
@@ -111,15 +112,11 @@ func ensureTemporalCLI(t *testing.T) string {
 	}
 
 	// Download from GitHub releases
-	t.Logf("Downloading temporal CLI %s...", temporalCLIVersion)
+	t.Logf("Downloading temporal CLI %s...", temporalCLITag)
 
 	goos := runtime.GOOS
 	goarch := runtime.GOARCH
-	if goarch == "amd64" {
-		goarch = "x86_64"
-	} else if goarch == "arm64" {
-		goarch = "aarch64"
-	}
+	// Use architecture names as-is (amd64, arm64)
 
 	var archiveName string
 	if goos == "windows" {
@@ -130,7 +127,7 @@ func ensureTemporalCLI(t *testing.T) string {
 		archiveName = fmt.Sprintf("temporal_cli_%s_linux_%s.tar.gz", temporalCLIVersion, goarch)
 	}
 
-	downloadURL := fmt.Sprintf("https://github.com/temporalio/cli/releases/download/%s/%s", temporalCLIVersion, archiveName)
+	downloadURL := fmt.Sprintf("https://github.com/temporalio/cli/releases/download/%s/%s", temporalCLITag, archiveName)
 
 	// Download archive
 	archivePath := filepath.Join(cacheDir, archiveName)
