@@ -49,7 +49,7 @@ func Start(parent context.Context, opts Options) (*Server, error) {
 			cancel()
 			return nil, fmt.Errorf("determine config directory: %w", err)
 		}
-		stateDir = filepath.Join(configDir, "tsnet-temporal-start-dev")
+		stateDir = filepath.Join(configDir, "tsnet-temporal-ts-net")
 	}
 
 	tsSrv := &tsnet.Server{

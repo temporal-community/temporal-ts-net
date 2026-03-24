@@ -12,13 +12,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/chaptersix/temporal-start-dev-ext/internal/tailscale"
+	"github.com/chaptersix/temporal-ts-net/internal/tailscale"
 )
 
-const usage = `Temporal CLI extension: temporal start-dev
+const usage = `Temporal CLI extension: temporal ts-net
 
 Usage:
-  temporal start-dev [flags passed to temporal server start-dev]
+  temporal ts-net [flags passed to temporal server start-dev]
 
 Extension flags:
   --tailscale / --tsnet                  Expose the dev server on a Tailscale tailnet.
@@ -28,7 +28,6 @@ Extension flags:
                                          Tailscale auth key (or TS_AUTHKEY).
   --tailscale-state-dir / --tsnet-state-dir VALUE
                                          Directory for tsnet state.
-  --codec-port VALUE                    Codec server port. Default: 8081.
   -h, --help                      Show this help text.
 
 All other flags are forwarded to:
@@ -52,20 +51,7 @@ func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return 2
 	}
 
-	codecSrv, err := StartCodecServer(extOpts.CodecPort)
-	if err != nil {
-		_, _ = fmt.Fprintf(stderr, "failed to start codec server: %v\n", err)
-		return 1
-	}
-	defer codecSrv.Stop()
-
-	_, _ = fmt.Fprintf(stdout, "Codec Server: %s\n", codecSrv.Endpoint)
-
-	childArgs := make([]string, 0, len(passThrough)+4)
-	childArgs = append(childArgs, passThrough...)
-	if !serverCfg.Headless && !serverCfg.HasUICodecEndpoint {
-		childArgs = append(childArgs, "--ui-codec-endpoint", codecSrv.Endpoint)
-	}
+	childArgs := passThrough
 
 	cmd := exec.Command("temporal", append([]string{"server", "start-dev"}, childArgs...)...)
 	cmd.Stdin = stdin

@@ -26,14 +26,6 @@ func TestParseExtensionArgs(t *testing.T) {
 		opts, pass, err := ParseExtensionArgs([]string{"--port", "7240"})
 		require.NoError(t, err)
 		require.Equal(t, "temporal-dev", opts.TailscaleHostname)
-		require.Equal(t, 8081, opts.CodecPort)
-		require.Equal(t, []string{"--port", "7240"}, pass)
-	})
-
-	t.Run("supports codec-port", func(t *testing.T) {
-		opts, pass, err := ParseExtensionArgs([]string{"--codec-port", "19081", "--port", "7240"})
-		require.NoError(t, err)
-		require.Equal(t, 19081, opts.CodecPort)
 		require.Equal(t, []string{"--port", "7240"}, pass)
 	})
 
@@ -57,11 +49,6 @@ func TestParseExtensionArgs(t *testing.T) {
 		_, _, err := ParseExtensionArgs([]string{"--tailscale-hostname"})
 		require.Error(t, err)
 	})
-
-	t.Run("errors on bad codec-port", func(t *testing.T) {
-		_, _, err := ParseExtensionArgs([]string{"--codec-port", "0"})
-		require.ErrorContains(t, err, "--codec-port")
-	})
 }
 
 func TestParseServerConfig(t *testing.T) {
@@ -80,14 +67,12 @@ func TestParseServerConfig(t *testing.T) {
 			"--port", "9000",
 			"--ui-port", "9100",
 			"--ui-ip", "127.0.0.1",
-			"--ui-codec-endpoint", "http://localhost:8123",
 		})
 		require.NoError(t, err)
 		require.Equal(t, "0.0.0.0", cfg.IP)
 		require.Equal(t, 9000, cfg.Port)
 		require.Equal(t, 9100, cfg.UIPort)
 		require.Equal(t, "127.0.0.1", cfg.UIIP)
-		require.True(t, cfg.HasUICodecEndpoint)
 	})
 
 	t.Run("parses shorthand port", func(t *testing.T) {

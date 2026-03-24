@@ -1,29 +1,21 @@
-# temporal-start-dev-ext
+# temporal-ts-net
 
-Extension command for Temporal CLI that adds:
+Extension command for Temporal CLI that exposes the Temporal development server on your Tailscale tailnet.
 
-- `temporal start-dev` as a shortcut for `temporal server start-dev`
-- automatic local codec server startup
-- optional tailnet exposure with `--tailscale`
+This extension provides:
 
-By default the built-in codec server applies a stateless `zlib + base64` envelope:
-
-- `/encode`: zlib-compress payload bytes, then base64-encode them
-- `/decode`: base64-decode payload bytes, then zlib-decompress them
-
-The codec preserves and restores the original payload encoding metadata.
-It does not require or validate key IDs and passes any existing
-`encryption-key-id` metadata through unchanged.
-
-Default codec server bind address is `127.0.0.1:8081`.
-Override with `--codec-port` when needed.
+- `temporal ts-net` as an enhanced wrapper for `temporal server start-dev`
+- Tailscale networking integration to expose your dev server across your tailnet
+- Simple setup with automatic Tailscale authentication
 
 ## Install
 
 Build the extension binary:
 
 ```bash
-go build -o ./bin/temporal-start_dev ./cmd/temporal-start_dev
+make build
+# or
+go build -o ./bin/temporal-ts_net ./cmd/temporal-ts_net
 ```
 
 Add `./bin` to your `PATH` and verify discovery:
@@ -32,20 +24,20 @@ Add `./bin` to your `PATH` and verify discovery:
 temporal help --all
 ```
 
-You should see `start-dev` listed as an extension command.
+You should see `ts-net` listed as an extension command.
 
 ## Usage
 
-Start local dev server with codec server:
+Start local dev server without Tailscale:
 
 ```bash
-temporal start-dev
+temporal ts-net
 ```
 
 Expose dev server on Tailscale tailnet:
 
 ```bash
-temporal start-dev \
+temporal ts-net \
     --tailscale \
     --tailscale-hostname your-dev-host
 ```
@@ -55,7 +47,8 @@ temporal start-dev \
 Pass any `temporal server start-dev` flags through directly:
 
 ```bash
-temporal start-dev \
+temporal ts-net \
+    --tailscale \
     --port 7234 \
     --ui-port 8234 \
     --db-filename /tmp/temporal-dev.db
@@ -63,10 +56,9 @@ temporal start-dev \
 
 ## Extension flags
 
-- `--tailscale`: enable tsnet listener and proxy
-- `--tailscale-hostname`: tsnet hostname (default `temporal-dev`)
-- `--tailscale-authkey`: auth key for non-interactive auth (or set `TS_AUTHKEY`)
-- `--tailscale-state-dir`: local state dir for tsnet node
-- `--codec-port`: local codec server port (default `8081`)
+- `--tailscale` / `--tsnet`: enable tsnet listener and proxy
+- `--tailscale-hostname` / `--tsnet-hostname`: tsnet hostname (default `temporal-dev`)
+- `--tailscale-authkey` / `--tsnet-authkey`: auth key for non-interactive auth (or set `TS_AUTHKEY` env var)
+- `--tailscale-state-dir` / `--tsnet-state-dir`: local state dir for tsnet node
 
 All non-extension flags are forwarded to `temporal server start-dev`.
