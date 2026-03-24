@@ -4,19 +4,28 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
-	defaultServerIP   = "localhost"
-	defaultServerPort = 7233
+	defaultServerIP           = "localhost"
+	defaultServerPort         = 7233
+	defaultMaxConnections     = 1000
+	defaultConnectionRate     = 100.0
+	defaultDialTimeout        = 10 * time.Second
+	defaultIdleTimeout        = 5 * time.Minute
 )
 
 type ExtensionOptions struct {
-	Help              bool
-	Tailscale         bool
-	TailscaleHostname string
-	TailscaleAuthKey  string
-	TailscaleStateDir string
+	Help                bool
+	Tailscale           bool
+	TailscaleHostname   string
+	TailscaleAuthKey    string
+	TailscaleStateDir   string
+	MaxConnections      int
+	ConnectionRateLimit float64
+	DialTimeout         time.Duration
+	IdleTimeout         time.Duration
 }
 
 type ServerConfig struct {
@@ -30,7 +39,13 @@ type ServerConfig struct {
 }
 
 func ParseExtensionArgs(args []string) (ExtensionOptions, []string, error) {
-	opts := ExtensionOptions{TailscaleHostname: "temporal-dev"}
+	opts := ExtensionOptions{
+		TailscaleHostname:   "temporal-dev",
+		MaxConnections:      defaultMaxConnections,
+		ConnectionRateLimit: defaultConnectionRate,
+		DialTimeout:         defaultDialTimeout,
+		IdleTimeout:         defaultIdleTimeout,
+	}
 	passThrough := make([]string, 0, len(args))
 
 	for i := 0; i < len(args); i++ {
@@ -107,6 +122,70 @@ func ParseExtensionArgs(args []string) (ExtensionOptions, []string, error) {
 			opts.TailscaleStateDir = arg[len("--tailscale-state-dir="):]
 		case strings.HasPrefix(arg, "--tsnet-state-dir="):
 			opts.TailscaleStateDir = arg[len("--tsnet-state-dir="):]
+		case arg == "--max-connections":
+			if i+1 >= len(args) {
+				return opts, nil, fmt.Errorf("missing value for --max-connections")
+			}
+			i++
+			val, err := strconv.Atoi(args[i])
+			if err != nil {
+				return opts, nil, fmt.Errorf("invalid --max-connections value: %w", err)
+			}
+			opts.MaxConnections = val
+		case strings.HasPrefix(arg, "--max-connections="):
+			val, err := strconv.Atoi(arg[len("--max-connections="):])
+			if err != nil {
+				return opts, nil, fmt.Errorf("invalid --max-connections value: %w", err)
+			}
+			opts.MaxConnections = val
+		case arg == "--connection-rate-limit":
+			if i+1 >= len(args) {
+				return opts, nil, fmt.Errorf("missing value for --connection-rate-limit")
+			}
+			i++
+			val, err := strconv.ParseFloat(args[i], 64)
+			if err != nil {
+				return opts, nil, fmt.Errorf("invalid --connection-rate-limit value: %w", err)
+			}
+			opts.ConnectionRateLimit = val
+		case strings.HasPrefix(arg, "--connection-rate-limit="):
+			val, err := strconv.ParseFloat(arg[len("--connection-rate-limit="):], 64)
+			if err != nil {
+				return opts, nil, fmt.Errorf("invalid --connection-rate-limit value: %w", err)
+			}
+			opts.ConnectionRateLimit = val
+		case arg == "--dial-timeout":
+			if i+1 >= len(args) {
+				return opts, nil, fmt.Errorf("missing value for --dial-timeout")
+			}
+			i++
+			val, err := time.ParseDuration(args[i])
+			if err != nil {
+				return opts, nil, fmt.Errorf("invalid --dial-timeout value: %w", err)
+			}
+			opts.DialTimeout = val
+		case strings.HasPrefix(arg, "--dial-timeout="):
+			val, err := time.ParseDuration(arg[len("--dial-timeout="):])
+			if err != nil {
+				return opts, nil, fmt.Errorf("invalid --dial-timeout value: %w", err)
+			}
+			opts.DialTimeout = val
+		case arg == "--idle-timeout":
+			if i+1 >= len(args) {
+				return opts, nil, fmt.Errorf("missing value for --idle-timeout")
+			}
+			i++
+			val, err := time.ParseDuration(args[i])
+			if err != nil {
+				return opts, nil, fmt.Errorf("invalid --idle-timeout value: %w", err)
+			}
+			opts.IdleTimeout = val
+		case strings.HasPrefix(arg, "--idle-timeout="):
+			val, err := time.ParseDuration(arg[len("--idle-timeout="):])
+			if err != nil {
+				return opts, nil, fmt.Errorf("invalid --idle-timeout value: %w", err)
+			}
+			opts.IdleTimeout = val
 		default:
 			passThrough = append(passThrough, arg)
 		}

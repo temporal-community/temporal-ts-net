@@ -28,7 +28,11 @@ Extension flags:
                                          Tailscale auth key (or TS_AUTHKEY).
   --tailscale-state-dir / --tsnet-state-dir VALUE
                                          Directory for tsnet state.
-  -h, --help                      Show this help text.
+  --max-connections VALUE                Maximum concurrent connections. Default: 1000.
+  --connection-rate-limit VALUE          Maximum connections per second. Default: 100.
+  --dial-timeout VALUE                   Timeout for dialing backend (e.g., 10s). Default: 10s.
+  --idle-timeout VALUE                   Idle timeout for proxy connections (e.g., 5m). Default: 5m.
+  -h, --help                             Show this help text.
 
 All other flags are forwarded to:
   temporal server start-dev
@@ -79,14 +83,18 @@ func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		}
 
 		tailnetSrv, err = tailscale.Start(ctx, tailscale.Options{
-			Hostname:     extOpts.TailscaleHostname,
-			AuthKey:      authKey,
-			StateDir:     extOpts.TailscaleStateDir,
-			FrontendAddr: fmt.Sprintf("%s:%d", serverCfg.EffectiveFrontendIP, serverCfg.Port),
-			FrontendPort: serverCfg.Port,
-			UIAddr:       uiAddr,
-			UIPort:       serverCfg.UIPort,
-			Logger:       slog.New(slog.NewTextHandler(stderr, nil)),
+			Hostname:            extOpts.TailscaleHostname,
+			AuthKey:             authKey,
+			StateDir:            extOpts.TailscaleStateDir,
+			FrontendAddr:        fmt.Sprintf("%s:%d", serverCfg.EffectiveFrontendIP, serverCfg.Port),
+			FrontendPort:        serverCfg.Port,
+			UIAddr:              uiAddr,
+			UIPort:              serverCfg.UIPort,
+			Logger:              slog.New(slog.NewTextHandler(stderr, nil)),
+			MaxConnections:      extOpts.MaxConnections,
+			ConnectionRateLimit: extOpts.ConnectionRateLimit,
+			DialTimeout:         extOpts.DialTimeout,
+			IdleTimeout:         extOpts.IdleTimeout,
 		})
 		if err != nil {
 			_, _ = fmt.Fprintf(stderr, "failed to start tailscale proxy: %v\n", err)
