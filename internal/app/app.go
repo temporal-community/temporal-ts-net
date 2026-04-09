@@ -23,6 +23,8 @@ Usage:
   temporal ts-net [flags passed to temporal server start-dev]
 
 Extension flags:
+  --config PATH                          Path to config file (default: ~/.config/temporalio/temporal.toml,
+                                         or TEMPORAL_CONFIG_FILE env var). Reads the [ts-net] section.
   --tailscale-hostname / --tsnet-hostname VALUE
                                          Tailnet hostname. Default: temporal-dev.
   --tailscale-authkey / --tsnet-authkey VALUE
@@ -50,6 +52,19 @@ func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return 0
 	}
 
+	// Load and apply config file. Precedence: CLI flags > env vars > config file > defaults.
+	configPath, err := ResolveConfigPath(extOpts.ConfigPath)
+	if err != nil {
+		_, _ = fmt.Fprintf(stderr, "failed to resolve config path: %v\n", err)
+		return 2
+	}
+	fileCfg, err := LoadConfig(configPath, extOpts.ConfigPath != "")
+	if err != nil {
+		_, _ = fmt.Fprintf(stderr, "%v\n", err)
+		return 2
+	}
+	ApplyFileConfig(&extOpts, fileCfg)
+
 	serverCfg, err := ParseServerConfig(passThrough)
 	if err != nil {
 		_, _ = fmt.Fprintf(stderr, "invalid server arguments: %v\n", err)
@@ -72,8 +87,10 @@ func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	}
 
 	authKey := extOpts.TailscaleAuthKey
-	if authKey == "" {
-		authKey = os.Getenv("TS_AUTHKEY")
+	if !extOpts.IsSet("tailscale-authkey") {
+		if envKey := os.Getenv("TS_AUTHKEY"); envKey != "" {
+			authKey = envKey
+		}
 	}
 
 	uiAddr := ""
