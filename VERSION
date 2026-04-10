@@ -1,4 +1,4 @@
 # Bump this version to trigger a new release.
-# When merged to main, tag-release.yml creates a GitHub release,
-# which triggers release.yml to build binaries via GoReleaser.
+# When merged to main, release.yml creates the tag and runs
+# GoReleaser to build and publish cross-platform binaries.
 0.0.3
