@@ -41,6 +41,13 @@ func TestParseExtensionArgs(t *testing.T) {
 		require.Equal(t, []string{"--ip", "127.0.0.1"}, pass)
 	})
 
+	t.Run("strips start-dev injected by extension system", func(t *testing.T) {
+		opts, pass, err := ParseExtensionArgs([]string{"start-dev", "--port", "7240"})
+		require.NoError(t, err)
+		require.Equal(t, "temporal-dev", opts.TailscaleHostname)
+		require.Equal(t, []string{"--port", "7240"}, pass)
+	})
+
 	t.Run("errors on missing value", func(t *testing.T) {
 		_, _, err := ParseExtensionArgs([]string{"--tailscale-hostname"})
 		require.Error(t, err)

@@ -45,6 +45,10 @@ type ServerConfig struct {
 }
 
 func ParseExtensionArgs(args []string) (ExtensionOptions, []string, error) {
+	// The extension system injects "start-dev" as args[0]; strip it before forwarding.
+	if len(args) > 0 && args[0] == "start-dev" {
+		args = args[1:]
+	}
 	opts := ExtensionOptions{
 		TailscaleHostname:   "temporal-dev",
 		MaxConnections:      defaultMaxConnections,
