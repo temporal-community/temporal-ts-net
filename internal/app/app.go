@@ -71,6 +71,24 @@ func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return 2
 	}
 
+	// Determine auth key before starting anything
+	authKey := resolveAuthKey(&extOpts)
+
+	// Validate that we can start tsnet before starting the Temporal server
+	stateDir := extOpts.TailscaleStateDir
+	if stateDir == "" {
+		configDir, err := os.UserConfigDir()
+		if err != nil {
+			_, _ = fmt.Fprintf(stderr, "failed to determine config directory: %v\n", err)
+			return 2
+		}
+		stateDir = fmt.Sprintf("%s/tsnet-temporal-ts-net", configDir)
+	}
+	if err := validateTSNetAuth(authKey, stateDir); err != nil {
+		_, _ = fmt.Fprintf(stderr, "%v\n", err)
+		return 2
+	}
+
 	childArgs := passThrough
 
 	cmd := exec.Command("temporal", append([]string{"server", "start-dev"}, childArgs...)...)
@@ -84,13 +102,6 @@ func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if err := cmd.Start(); err != nil {
 		_, _ = fmt.Fprintf(stderr, "failed to start temporal CLI: %v\n", err)
 		return 1
-	}
-
-	authKey := extOpts.TailscaleAuthKey
-	if !extOpts.IsSet("tailscale-authkey") {
-		if envKey := os.Getenv("TS_AUTHKEY"); envKey != "" {
-			authKey = envKey
-		}
 	}
 
 	uiAddr := ""
@@ -181,4 +192,34 @@ func interruptAndWait(cmd *exec.Cmd) error {
 		_ = cmd.Process.Kill()
 		return <-done
 	}
+}
+
+// resolveAuthKey determines the auth key using precedence:
+// CLI flag > TS_AUTHKEY env var > (config file is already in opts)
+func resolveAuthKey(opts *ExtensionOptions) string {
+	if opts.IsSet("tailscale-authkey") {
+		return opts.TailscaleAuthKey
+	}
+	if envKey := os.Getenv("TS_AUTHKEY"); envKey != "" {
+		return envKey
+	}
+	return opts.TailscaleAuthKey // from config file or empty
+}
+
+// validateTSNetAuth checks that tsnet can authenticate either via auth key or existing state
+func validateTSNetAuth(authKey, stateDir string) error {
+	// If auth key is provided, we're good
+	if authKey != "" {
+		return nil
+	}
+
+	// Check if existing state file exists (node already authenticated)
+	stateFile := fmt.Sprintf("%s/tailscaled.state", stateDir)
+	if _, err := os.Stat(stateFile); err == nil {
+		return nil
+	}
+
+	// No auth key and no existing state
+	return fmt.Errorf("tsnet authentication required: provide --tsnet-authkey or set TS_AUTHKEY environment variable\n" +
+		"Generate an auth key at: https://login.tailscale.com/admin/settings/keys")
 }
