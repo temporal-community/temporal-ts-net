@@ -1,4 +1,4 @@
 # Bump this version to trigger a new release.
 # When merged to main, release.yml creates the tag and runs
 # GoReleaser to build and publish cross-platform binaries.
-0.0.3
+0.0.4
